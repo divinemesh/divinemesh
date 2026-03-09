@@ -1,0 +1,38 @@
+# DivineMesh Requirements
+# "I can do all this through him who gives me strength." - Philippians 4:13
+
+# ── Core ──────────────────────────────────────────────────────────────────────
+aiohttp>=3.9.0
+aiohttp[speedups]
+websockets>=12.0
+psutil>=5.9.0
+requests>=2.31.0
+
+# ── Blockchain / Crypto ───────────────────────────────────────────────────────
+web3>=6.15.0
+eth-account>=0.11.0
+eth-hash[pycryptodome]>=0.5.2
+
+# ── Cryptography ──────────────────────────────────────────────────────────────
+cryptography>=42.0.0
+pyotp>=2.9.0
+qrcode[pil]>=7.4.2
+
+# ── Hardware ──────────────────────────────────────────────────────────────────
+GPUtil>=1.4.0
+py-cpuinfo>=9.0.0
+
+# ── AI / Compute ──────────────────────────────────────────────────────────────
+numpy>=1.26.0
+torch>=2.1.0               # Optional: GPU compute tasks
+# transformers>=4.38.0     # Optional: LLM task execution
+# diffusers>=0.25.0        # Optional: Image generation tasks
+
+# ── Storage / Serialization ───────────────────────────────────────────────────
+pydantic>=2.6.0
+python-dotenv>=1.0.0
+
+# ── Dev / Testing ─────────────────────────────────────────────────────────────
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+black>=24.0.0
