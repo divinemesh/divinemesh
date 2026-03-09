@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DivineMesh — Distributed Compute Network</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ── Sacred Variables ──────────────────────────────────────────────── */
+:root {
+  --gold:       #c9a84c;
+  --gold-dim:   #8a6e30;
+  --gold-glow:  rgba(201,168,76,0.18);
+  --crimson:    #8b1a1a;
+  --ink:        #0a0a0f;
+  --ink-mid:    #111118;
+  --ink-soft:   #1a1a25;
+  --ink-border: #2a2a3a;
+  --silver:     #c0c0d0;
+  --silver-dim: #7a7a90;
+  --green-earn: #3cb371;
+  --blue-info:  #4a9eff;
+  --text:       #e8e8f0;
+  --text-dim:   #9898b0;
+  --font-display: 'Cinzel', serif;
+  --font-body:    'Crimson Pro', serif;
+  --font-mono:    'JetBrains Mono', monospace;
+  --radius: 4px;
+  --transition: 0.25s cubic-bezier(.4,0,.2,1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Noise texture overlay ────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+
+/* ── Layout ───────────────────────────────────────────────────────── */
+.app { display: flex; min-height: 100vh; }
+
+/* ── Sidebar ──────────────────────────────────────────────────────── */
+.sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: var(--ink-mid);
+  border-right: 1px solid var(--ink-border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+  transition: transform var(--transition);
+}
+
+.sidebar-logo {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid var(--ink-border);
+}
+
+.logo-mark {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: block;
+  line-height: 1.2;
+}
+
+.logo-mark span { color: var(--silver-dim); font-weight: 400; font-size: 11px; display: block; letter-spacing: 0.25em; margin-top: 3px; }
+
+.sidebar-verse {
+  padding: 16px 24px;
+  font-style: italic;
+  font-size: 12px;
+  color: var(--gold-dim);
+  border-bottom: 1px solid var(--ink-border);
+  line-height: 1.5;
+}
+
+.sidebar-verse cite { display: block; margin-top: 4px; font-style: normal; opacity: 0.7; }
+
+.nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+
+.nav-section {
+  padding: 16px 24px 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--silver-dim);
+  text-transform: uppercase;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 15px;
+  transition: all var(--transition);
+  border-left: 2px solid transparent;
+  cursor: pointer;
+}
+
+.nav-link:hover { color: var(--text); background: var(--gold-glow); }
+.nav-link.active { color: var(--gold); border-left-color: var(--gold); background: var(--gold-glow); }
+.nav-link .icon { width: 18px; text-align: center; opacity: 0.7; }
+.nav-link.active .icon { opacity: 1; }
+
+.sidebar-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--ink-border);
+}
+
+.node-badge {
+  background: var(--ink-soft);
+  border: 1px solid var(--ink-border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.node-badge .label { color: var(--silver-dim); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+.node-badge .value { color: var(--gold); margin-top: 2px; word-break: break-all; }
+
+.status-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  animation: pulse 2s infinite;
+}
+.status-dot.online { background: var(--green-earn); }
+.status-dot.offline { background: var(--crimson); animation: none; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── Main Content ─────────────────────────────────────────────────── */
+.main {
+  margin-left: 260px;
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  padding: 20px 36px;
+  border-bottom: 1px solid var(--ink-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--ink-mid);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
+.topbar-actions { display: flex; gap: 12px; align-items: center; }
+
+.btn {
+  padding: 8px 18px;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all var(--transition);
+  border: 1px solid;
+}
+
+.btn-primary {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--ink);
+  font-weight: 500;
+}
+.btn-primary:hover { background: #e0bc5e; border-color: #e0bc5e; }
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--ink-border);
+  color: var(--text-dim);
+}
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+.btn-danger {
+  background: transparent;
+  border-color: var(--crimson);
+  color: #e05555;
+}
+.btn-danger:hover { background: rgba(139,26,26,0.2); }
+
+/* ── Sections ─────────────────────────────────────────────────────── */
+.section { display: none; padding: 32px 36px; animation: fadeIn 0.3s ease; }
+.section.active { display: block; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ── Cards ────────────────────────────────────────────────────────── */
+.card {
+  background: var(--ink-soft);
+  border: 1px solid var(--ink-border);
+  border-radius: var(--radius);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+  opacity: 0.5;
+}
+
+.card-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  margin-bottom: 12px;
+}
+
+.card-value {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  font-weight: 300;
+  color: var(--text);
+  line-height: 1;
+}
+
+.card-value .unit {
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-left: 6px;
+}
+
+.card-change {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  margin-top: 8px;
+}
+.card-change.up { color: var(--green-earn); }
+.card-change.down { color: #e05555; }
+
+/* ── Grid ─────────────────────────────────────────────────────────── */
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+
+/* ── Section Header ───────────────────────────────────────────────── */
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+.section-title .ornament { color: var(--gold); }
+
+.section-subtitle {
+  font-style: italic;
+  font-size: 14px;
+  color: var(--gold-dim);
+  margin-top: 4px;
+}
+
+/* ── Gauge / Progress ─────────────────────────────────────────────── */
+.gauge-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.gauge-label { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); width: 90px; }
+.gauge-bar { flex: 1; height: 6px; background: var(--ink-border); border-radius: 3px; overflow: hidden; }
+.gauge-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+.gauge-fill.cpu { background: linear-gradient(90deg, #4a9eff, #7bc3ff); }
+.gauge-fill.gpu { background: linear-gradient(90deg, var(--gold-dim), var(--gold)); }
+.gauge-fill.ram { background: linear-gradient(90deg, var(--green-earn), #5de898); }
+.gauge-fill.net { background: linear-gradient(90deg, #9b59b6, #c07dd6); }
+.gauge-value { font-family: var(--font-mono); font-size: 12px; color: var(--text); width: 48px; text-align: right; }
+
+/* ── Toggle ───────────────────────────────────────────────────────── */
+.toggle-wrap { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--ink-border); }
+.toggle-wrap:last-child { border-bottom: none; }
+.toggle-label { font-size: 15px; color: var(--text); }
+.toggle-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.toggle {
+  width: 44px; height: 24px;
+  background: var(--ink-border);
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  transition: background var(--transition);
+  flex-shrink: 0;
+}
+.toggle.on { background: var(--gold); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  background: white;
+  border-radius: 50%;
+  transition: transform var(--transition);
+}
+.toggle.on::after { transform: translateX(20px); }
+
+/* ── Slider ───────────────────────────────────────────────────────── */
+.slider-wrap { margin-bottom: 18px; }
+.slider-header { display: flex; justify-content: space-between; margin-bottom: 6px; font-family: var(--font-mono); font-size: 12px; }
+.slider-header .label { color: var(--text-dim); }
+.slider-header .val { color: var(--gold); }
+input[type=range] {
+  width: 100%; height: 4px; appearance: none;
+  background: var(--ink-border);
+  border-radius: 2px; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px; height: 14px;
+  background: var(--gold);
+  border-radius: 50%;
+}
+
+/* ── Table ────────────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left;
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--silver-dim);
+  border-bottom: 1px solid var(--ink-border);
+}
+td {
+  padding: 12px 14px;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(42,42,58,0.5);
+  vertical-align: middle;
+}
+tr:hover td { background: var(--gold-glow); }
+.mono { font-family: var(--font-mono); font-size: 12px; }
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.badge-green { background: rgba(60,179,113,0.15); color: var(--green-earn); border: 1px solid rgba(60,179,113,0.3); }
+.badge-gold  { background: var(--gold-glow); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
+.badge-blue  { background: rgba(74,158,255,0.12); color: var(--blue-info); border: 1px solid rgba(74,158,255,0.3); }
+.badge-red   { background: rgba(139,26,26,0.2); color: #e05555; border: 1px solid rgba(224,85,85,0.3); }
+
+/* ── Payment ──────────────────────────────────────────────────────── */
+.payment-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+.payment-option {
+  border: 1px solid var(--ink-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--transition);
+}
+.payment-option:hover, .payment-option.selected { border-color: var(--gold); background: var(--gold-glow); }
+.payment-option .p-icon { font-size: 28px; margin-bottom: 8px; }
+.payment-option .p-name { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); }
+
+/* ── Projects ─────────────────────────────────────────────────────── */
+.project-card {
+  background: var(--ink-soft);
+  border: 1px solid var(--ink-border);
+  border-radius: var(--radius);
+  padding: 20px;
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative;
+}
+.project-card:hover { border-color: var(--gold-dim); transform: translateY(-2px); }
+.project-card.featured { border-color: var(--gold-dim); }
+.project-name { font-family: var(--font-display); font-size: 16px; color: var(--gold); margin-bottom: 6px; }
+.project-desc { font-size: 14px; color: var(--text-dim); margin-bottom: 14px; line-height: 1.5; }
+.project-progress { height: 4px; background: var(--ink-border); border-radius: 2px; overflow: hidden; margin-bottom: 10px; }
+.project-progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold-dim), var(--gold)); border-radius: 2px; }
+.project-meta { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
+
+/* ── Wallet / Crypto ──────────────────────────────────────────────── */
+.wallet-address {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--gold);
+  background: var(--ink);
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--ink-border);
+  word-break: break-all;
+  cursor: pointer;
+}
+.wallet-address:hover { border-color: var(--gold); }
+
+.crypto-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--ink-border); }
+.crypto-row:last-child { border-bottom: none; }
+.crypto-icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.crypto-name { font-weight: 600; font-size: 15px; }
+.crypto-symbol { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); }
+.crypto-amount { margin-left: auto; text-align: right; font-family: var(--font-mono); font-size: 14px; }
+.crypto-usd { font-size: 12px; color: var(--text-dim); }
+
+/* ── Input ────────────────────────────────────────────────────────── */
+.form-group { margin-bottom: 18px; }
+.form-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.form-input {
+  width: 100%;
+  background: var(--ink);
+  border: 1px solid var(--ink-border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  transition: border-color var(--transition);
+}
+.form-input:focus { outline: none; border-color: var(--gold); }
+.form-input::placeholder { color: var(--text-dim); opacity: 0.5; }
+
+/* ── QR Code ──────────────────────────────────────────────────────── */
+.qr-box {
+  width: 160px; height: 160px;
+  background: white;
+  border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+  font-size: 80px;
+}
+
+/* ── Verse Banner ─────────────────────────────────────────────────── */
+.verse-banner {
+  background: linear-gradient(135deg, rgba(201,168,76,0.08), rgba(201,168,76,0.03));
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--gold-dim);
+  text-align: center;
+  margin-bottom: 24px;
+}
+.verse-banner cite { display: block; margin-top: 6px; font-style: normal; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; opacity: 0.7; }
+
+/* ── Tier Cards ───────────────────────────────────────────────────── */
+.tier-card {
+  border: 1px solid var(--ink-border);
+  border-radius: var(--radius);
+  padding: 28px;
+  text-align: center;
+  position: relative;
+}
+.tier-card.recommended { border-color: var(--gold); }
+.tier-card.recommended::before { content: 'RECOMMENDED'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--gold); color: var(--ink); font-family: var(--font-mono); font-size: 10px; padding: 2px 12px; border-radius: 10px; font-weight: 600; }
+.tier-name { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--gold); margin-bottom: 8px; }
+.tier-price { font-family: var(--font-mono); font-size: 36px; font-weight: 300; margin-bottom: 20px; }
+.tier-price .sub { font-size: 14px; color: var(--text-dim); }
+.tier-feature { padding: 8px 0; border-top: 1px solid var(--ink-border); font-size: 14px; color: var(--text-dim); }
+.tier-feature .check { color: var(--green-earn); margin-right: 8px; }
+
+/* ── Notification ─────────────────────────────────────────────────── */
+.notification {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  background: var(--ink-soft);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  font-size: 14px;
+  z-index: 9999;
+  animation: slideIn 0.3s ease;
+  max-width: 320px;
+}
+@keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: none; }
+  .main { margin-left: 0; }
+  .grid-2, .grid-2-1, .grid-3 { grid-template-columns: 1fr; }
+  .payment-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Decorative ───────────────────────────────────────────────────── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  color: var(--gold-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+}
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--ink-border); }
+
+.login-screen {
+  position: fixed; inset: 0;
+  background: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.login-box {
+  width: 400px;
+  text-align: center;
+}
+.login-title { font-family: var(--font-display); font-size: 28px; font-weight: 900; color: var(--gold); letter-spacing: 0.12em; margin-bottom: 6px; }
+.login-subtitle { font-style: italic; font-size: 14px; color: var(--gold-dim); margin-bottom: 32px; }
+.login-verse { font-size: 13px; font-style: italic; color: var(--text-dim); margin-top: 24px; }
+</style>
+</head>
+<body>
+
+<!-- ── Login Screen ──────────────────────────────────────────────────────── -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-title">⚔ DIVINEMESH</div>
+    <div class="login-subtitle">"I am the way and the truth and the life." — John 14:6</div>
+    <div class="form-group">
+      <label class="form-label">Node ID (auto-generated)</label>
+      <input class="form-input" id="loginNodeId" placeholder="DM-XXXXXXXXXXXXXXXXXXXXXXXX" readonly>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" type="password" id="loginPassword" placeholder="Enter your password">
+    </div>
+    <div class="form-group" id="totpGroup" style="display:none">
+      <label class="form-label">2FA Code</label>
+      <input class="form-input" id="totpCode" placeholder="000000" maxlength="6">
+    </div>
+    <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="doLogin()">ENTER THE NETWORK</button>
+    <div style="margin-top:14px;">
+      <button class="btn btn-outline" onclick="showRegister()">Register New Node</button>
+    </div>
+    <div class="login-verse">"No personal information required. Your identity is cryptographic."</div>
+  </div>
+</div>
+
+<!-- ── Main App ───────────────────────────────────────────────────────────── -->
+<div class="app" id="mainApp" style="display:none">
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-mark">DivineMesh
+        <span>COMPUTE NETWORK v1.0</span>
+      </span>
+    </div>
+    <div class="sidebar-verse">
+      "Whatever you do, work at it with all your heart."
+      <cite>— Colossians 3:23</cite>
+    </div>
+    <div class="nav">
+      <div class="nav-section">Node</div>
+      <a class="nav-link active" onclick="showSection('dashboard')" data-section="dashboard">
+        <span class="icon">◈</span> Dashboard
+      </a>
+      <a class="nav-link" onclick="showSection('hardware')" data-section="hardware">
+        <span class="icon">⚙</span> Hardware
+      </a>
+      <a class="nav-link" onclick="showSection('earnings')" data-section="earnings">
+        <span class="icon">◎</span> Earnings
+      </a>
+      <div class="nav-section">Compute</div>
+      <a class="nav-link" onclick="showSection('tasks')" data-section="tasks">
+        <span class="icon">▦</span> Active Tasks
+      </a>
+      <a class="nav-link" onclick="showSection('projects')" data-section="projects">
+        <span class="icon">✦</span> Projects
+      </a>
+      <div class="nav-section">Account</div>
+      <a class="nav-link" onclick="showSection('wallet')" data-section="wallet">
+        <span class="icon">◆</span> Wallet
+      </a>
+      <a class="nav-link" onclick="showSection('upgrade')" data-section="upgrade">
+        <span class="icon">↑</span> Upgrade Tier
+      </a>
+      <a class="nav-link" onclick="showSection('settings')" data-section="settings">
+        <span class="icon">⊙</span> Settings
+      </a>
+      <a class="nav-link" onclick="showSection('security')" data-section="security">
+        <span class="icon">🔒</span> Security
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="node-badge">
+        <div class="label">Node ID</div>
+        <div class="value" id="sidebarNodeId">DM-LOADING...</div>
+        <div style="margin-top:8px; font-size:11px; color:var(--text-dim);">
+          <span class="status-dot online" id="statusDot"></span>
+          <span id="statusText">Online</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main">
+    <div class="topbar">
+      <div class="page-title" id="pageTitle">Dashboard</div>
+      <div class="topbar-actions">
+        <div style="font-family:var(--font-mono);font-size:12px;color:var(--gold);" id="balanceBadge">
+          ◎ 0.000 DMC
+        </div>
+        <button class="btn btn-outline" onclick="refreshData()">↺ Refresh</button>
+        <button class="btn btn-danger" onclick="doLogout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- ── DASHBOARD ──────────────────────────────────────────────────── -->
+    <div class="section active" id="section-dashboard">
+      <div class="verse-banner">
+        "Let your light shine before others, that they may see your good deeds and glorify your Father in heaven."
+        <cite>— Matthew 5:16</cite>
+      </div>
+      <div class="grid-4" style="margin-bottom:24px;">
+        <div class="card">
+          <div class="card-title">DMC Balance</div>
+          <div class="card-value" id="dmcBalance">0.000 <span class="unit">DMC</span></div>
+          <div class="card-change up" id="dmcChange">+0.000 today</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Compute Score</div>
+          <div class="card-value" id="computeScore">—</div>
+          <div class="card-change" style="color:var(--text-dim)">Hardware rating</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Tasks Completed</div>
+          <div class="card-value" id="tasksCompleted">0</div>
+          <div class="card-change up">This session</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Uptime</div>
+          <div class="card-value" id="uptimeDisplay">0h 0m</div>
+          <div class="card-change" style="color:var(--text-dim)">Since last start</div>
+        </div>
+      </div>
+      <div class="grid-2-1">
+        <div class="card">
+          <div class="card-title">Earnings Over Time (DMC)</div>
+          <canvas id="earningsChart" height="200"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-title">Live Resource Usage</div>
+          <div style="margin-top:8px;">
+            <div class="gauge-row">
+              <div class="gauge-label">CPU</div>
+              <div class="gauge-bar"><div class="gauge-fill cpu" id="cpuGauge" style="width:0%"></div></div>
+              <div class="gauge-value" id="cpuPct">0%</div>
+            </div>
+            <div class="gauge-row">
+              <div class="gauge-label">GPU</div>
+              <div class="gauge-bar"><div class="gauge-fill gpu" id="gpuGauge" style="width:0%"></div></div>
+              <div class="gauge-value" id="gpuPct">0%</div>
+            </div>
+            <div class="gauge-row">
+              <div class="gauge-label">RAM</div>
+              <div class="gauge-bar"><div class="gauge-fill ram" id="ramGauge" style="width:0%"></div></div>
+              <div class="gauge-value" id="ramPct">0%</div>
+            </div>
+            <div class="gauge-row">
+              <div class="gauge-label">Network</div>
+              <div class="gauge-bar"><div class="gauge-fill net" id="netGauge" style="width:30%"></div></div>
+              <div class="gauge-value" id="netVal">—</div>
+            </div>
+          </div>
+          <div class="divider">STATUS</div>
+          <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-dim);">
+            <div style="margin-bottom:6px;">
+              Node: <span style="color:var(--green-earn)" id="nodeStatus">● Active</span>
+            </div>
+            <div style="margin-bottom:6px;">
+              Tier: <span style="color:var(--gold)" id="tierDisplay">Free</span>
+            </div>
+            <div>
+              Network: <span style="color:var(--blue-info)">Polygon</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── HARDWARE ───────────────────────────────────────────────────── -->
+    <div class="section" id="section-hardware">
+      <div class="section-header">
+        <div>
+          <div class="section-title"><span class="ornament">⚙</span> Hardware Profile</div>
+          <div class="section-subtitle">"For we are God's handiwork." — Ephesians 2:10</div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-bottom:24px;">
+        <div class="card">
+          <div class="card-title">CPU</div>
+          <div style="font-size:15px;margin-bottom:12px;" id="cpuBrand">Detecting...</div>
+          <div class="gauge-row">
+            <div class="gauge-label">Cores (P)</div>
+            <div class="gauge-bar"><div class="gauge-fill cpu" id="coreGauge" style="width:50%"></div></div>
+            <div class="gauge-value" id="coreCount">—</div>
+          </div>
+          <div class="gauge-row">
+            <div class="gauge-label">Frequency</div>
+            <div class="gauge-bar"><div class="gauge-fill cpu" style="width:70%"></div></div>
+            <div class="gauge-value" id="cpuFreq">—</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Memory</div>
+          <div style="font-size:32px;font-family:var(--font-mono);font-weight:300;" id="ramTotal">— GB</div>
+          <div style="font-size:13px;color:var(--text-dim);margin-top:4px;" id="ramAvail">— GB available</div>
+          <div class="gauge-row" style="margin-top:14px;">
+            <div class="gauge-label">Used</div>
+            <div class="gauge-bar"><div class="gauge-fill ram" id="ramUsedGauge" style="width:0%"></div></div>
+            <div class="gauge-value" id="ramUsedPct">0%</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" id="gpuCard">
+        <div class="card-title">GPU(s)</div>
+        <div id="gpuList" style="color:var(--text-dim);font-style:italic;">No GPU detected or not yet queried.</div>
+      </div>
+    </div>
+
+    <!-- ── EARNINGS ───────────────────────────────────────────────────── -->
+    <div class="section" id="section-earnings">
+      <div class="section-header">
+        <div>
+          <div class="section-title"><span class="ornament">◎</span> Earnings</div>
+          <div class="section-subtitle">"Give, and it will be given to you." — Luke 6:38</div>
+        </div>
+        <button class="btn btn-primary" onclick="cashOut()">Cash Out DMC</button>
+      </div>
+      <div class="grid-3" style="margin-bottom:24px;">
+        <div class="card">
+          <div class="card-title">Total Earned</div>
+          <div class="card-value">0.000 <span class="unit">DMC</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">This Month</div>
+          <div class="card-value">0.000 <span class="unit">DMC</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Pending Proofs</div>
+          <div class="card-value">0</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Transaction History</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Date</th><th>Type</th><th>Amount (DMC)</th><th>Tx Hash</th><th>Status</th>
+            </tr></thead>
+            <tbody id="txHistory">
+              <tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:24px;">No transactions yet. Start sharing compute to earn DMC.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TASKS ──────────────────────────────────────────────────────── -->
+    <div class="section" id="section-tasks">
+      <div class="section-header">
+        <div>
+          <div class="section-title"><span class="ornament">▦</span> Active Tasks</div>
+          <div class="section-subtitle">"Whatever your hand finds to do, do it with all your might." — Ecclesiastes 9:10</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Task ID</th><th>Type</th><th>Progress</th><th>CPU</th><th>Duration</th><th>Reward</th>
+            </tr></thead>
+            <tbody id="taskList">
+              <tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:24px;">No active tasks. Your node will pick up work automatically when available.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PROJECTS ───────────────────────────────────────────────────── -->
+    <div class="section" id="section-projects">
+      <div class="section-header">
+        <div>
+          <div class="section-title"><span class="ornament">✦</span> Community Projects</div>
+          <div class="section-subtitle">"Plans are established by seeking advice." — Proverbs 20:18</div>
+        </div>
+        <button class="btn btn-primary" onclick="showPostProject()">+ Post Project</button>
+      </div>
+      <div class="grid-3" id="projectGrid">
+        <div class="project-card featured">
+          <span class="badge badge-gold" style="margin-bottom:12px;">Featured</span>
+          <div class="project-name">OpenMind LLM</div>
+          <div class="project-desc">Training a 7B parameter open-source language model for multilingual understanding.</div>
+          <div class="project-progress"><div class="project-progress-fill" style="width:62%"></div></div>
+          <div class="project-meta">
+            <span>62% funded</span>
+            <span>Owner: 51% · Investors: 49%</span>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px;">
+            <button class="btn btn-primary" style="flex:1;padding:8px;" onclick="donateCompute('proj_001')">Donate Compute</button>
+            <button class="btn btn-outline" style="padding:8px 14px;" onclick="viewProject('proj_001')">Details</button>
+          </div>
+        </div>
+        <div class="project-card">
+          <div class="project-name">MedVision AI</div>
+          <div class="project-desc">Medical image analysis AI for rare disease detection in resource-limited settings.</div>
+          <div class="project-progress"><div class="project-progress-fill" style="width:28%"></div></div>
+          <div class="project-meta">
+            <span>28% funded</span>
+            <span>Owner: 51% · Investors: 49%</span>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px;">
+            <button class="btn btn-primary" style="flex:1;padding:8px;" onclick="donateCompute('proj_002')">Donate Compute</button>
+            <button class="btn btn-outline" style="padding:8px 14px;" onclick="viewProject('proj_002')">Details</button>
+          </div>
+        </div>
+        <div class="project-card">
+          <div class="project-name">ClimateNet</div>
+          <div class="project-desc">High-resolution climate simulation for regional flood and drought prediction models.</div>
+          <div class="project-progress"><div class="project-progress-fill" style="width:44%"></div></div>
+          <div class="project-meta">
+            <span>44% funded</span>
+            <span>Owner: 51% · Investors: 49%</span>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px;">
+            <button class="btn btn-primary" style="flex:1;padding:8px;" onclick="donateCompute('proj_003')">Donate Compute</button>
+            <button class="btn btn-outline" style="padding:8px 14px;" onclick="viewProject('proj_003')">Details</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── WALLET ─────────────────────────────────────────────────────── -->
+    <div class="section" id="section-wallet">
+      <div class="section-header">
+        <div>
+          <div class="section-title"><span class="ornament">◆</span> Wallet</div>
+          <div class="section-subtitle">"Store up for yourselves treasures in heaven." — Matthew 6:20</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="card" style="margin-bottom:20px;">
+            <div class="card-title">DMC Address</div>
+            <div class="wallet-address" id="walletAddress" onclick="copyAddress()" title="Click to copy">0x0000...0000</div>
+            <div style="margin-top:10px;font-size:12px;color:var(--text-dim);">Click to copy · Compatible with any EVM wallet</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Balances</div>
+            <div class="crypto-row">
+              <div class="crypto-icon" style="background:rgba(201,168,76,0.15);">◎</div>
+              <div><div class="crypto-name">DivineMesh Coin</div><div class="crypto-symbol">DMC</div></div>
+              <div class="crypto-amount"><div id="walletDMC">0.000</div><div class="crypto-usd">≈ $0.00</div></div>
+            </div>
+            <div class="crypto-row">
+              <div class="crypto-icon" style="background:rgba(130,71,229,0.15);">⬡</div>
+              <div><div class="crypto-name">Polygon MATIC</div><div class="crypto-symbol">MATIC</div></div>
+              <div class="crypto-amount"><div>0.000</div><div class="crypto-usd">For gas fees</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Add Funds / Buy DMC</div>
+          <div style="margin-bottom:16px;font-size:14px;color:var(--text-dim);">Select payment method:</div>
+          <div class="payment-grid">
+            <div class="payment-option selected" onclick="selectPayment(this)">
+              <div class="p-icon">₿</div>
+              <div class="p-name">Bitcoin</div>
+            </div>
+            <div class="payment-option" onclick="selectPayment(this)">
+              <div class="p-icon">Ξ</div>
+              <div class="p-name">Ethereum</div>
+            </div>
+            <div class="payment-option" onclick="selectPayment(this)">
+              <div class="p-icon">◎</div>
+              <div class="p-name">USDT/USDC</div>
+            </div>
+            <div class="payment-option" onclick="selectPayment(this)">
+              <div class="p-icon">💳</div>
+              <div class="p-name">Card</div>
+            </div>
+            <div class="payment-option" onclick="selectPayment(this)">
+              <div class="p-icon">P</div>
+              <div class="p-name">PayPal</div>
+            </div>
+            <div class="payment-option" onclick="selectPayment(this)">
+              <div class="p-icon">$</div>
+              <div class="p-name">Bank Wire</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount (USD)</label>
+            <input class="form-input" type="number" placeholder="10.00" min="1">
+          </div>
+          <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="showNotification('Redirecting to payment processor...')">
+            Purchase DMC
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── UPGRADE ────────────────────────────────────────────────────── -->
+    <div class="section" id="section-upgrade">
+      <div class="section-header">
+        <div>
+          <div class="section-title"><span class="ornament">↑</span> Pricing Tiers</div>
+          <div class="section-subtitle">"I came that they may have life, and have it abundantly." — John 10:10</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="tier-card">
+          <div class="tier-name">Free</div>
+          <div class="tier-price">$0 <span class="sub">/ month</span></div>
+          <div class="tier-feature"><span class="check">✓</span>Earn DMC by sharing compute</div>
+          <div class="tier-feature"><span class="check">✓</span>Limited compute access (your hardware)</div>
+          <div class="tier-feature"><span class="check">✓</span>Access community projects</div>
+          <div class="tier-feature"><span class="check">✓</span>Basic dashboard</div>
+          <div class="tier-feature" style="color:var(--text-dim)">✗ Priority task queue</div>
+          <div class="tier-feature" style="color:var(--text-dim)">✗ Network compute boost</div>
+          <button class="btn btn-outline" style="width:100%;margin-top:20px;padding:12px;">Current Plan</button>
+        </div>
+        <div class="tier-card recommended">
+          <div class="tier-name">Paid</div>
+          <div class="tier-price">DMC or Fiat <span class="sub">/ month</span></div>
+          <div class="tier-feature"><span class="check">✓</span>Everything in Free</div>
+          <div class="tier-feature"><span class="check">✓</span>Full network compute access</div>
+          <div class="tier-feature"><span class="check">✓</span>Priority task queue</div>
+          <div class="tier-feature"><span class="check">✓</span>Advanced AI models</div>
+          <div class="tier-feature"><span class="check">✓</span>Project investment tools</div>
+          <div class="tier-feature"><span class="check">✓</span>API access</div>
+          <button class="btn btn-primary" style="width:100%;margin-top:20px;padding:12px;" onclick="showNotification('Redirecting to upgrade flow...')">Upgrade Now</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS ───────────────────────────────────────────────────── -->
+    <div class="section" id="section-settings">
+      <div class="section-header">
+        <div>
+          <div class="section-title"><span class="ornament">⊙</span> Settings</div>
+          <div class="section-subtitle">"The prudent see danger and take precautions." — Proverbs 22:3</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Resource Sharing Limits</div>
+          <div class="slider-wrap" style="margin-top:16px;">
+            <div class="slider-header"><span class="label">Max CPU Usage</span><span class="val" id="cpuLimitVal">50%</span></div>
+            <input type="range" min="0" max="100" value="50" oninput="document.getElementById('cpuLimitVal').textContent=this.value+'%'">
+          </div>
+          <div class="slider-wrap">
+            <div class="slider-header"><span class="label">Max RAM Usage</span><span class="val" id="ramLimitVal">30%</span></div>
+            <input type="range" min="0" max="100" value="30" oninput="document.getElementById('ramLimitVal').textContent=this.value+'%'">
+          </div>
+          <div class="slider-wrap">
+            <div class="slider-header"><span class="label">Max GPU Usage</span><span class="val" id="gpuLimitVal">70%</span></div>
+            <input type="range" min="0" max="100" value="70" oninput="document.getElementById('gpuLimitVal').textContent=this.value+'%'">
+          </div>
+          <div class="slider-wrap">
+            <div class="slider-header"><span class="label">Upload Bandwidth</span><span class="val" id="uploadVal">50 Mbps</span></div>
+            <input type="range" min="1" max="1000" value="50" oninput="document.getElementById('uploadVal').textContent=this.value+' Mbps'">
+          </div>
+          <button class="btn btn-primary" style="margin-top:8px;" onclick="saveLimits()">Save Limits</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Sharing Preferences</div>
+          <div style="margin-top:12px;">
+            <div class="toggle-wrap">
+              <div><div class="toggle-label">Idle-only mode</div><div class="toggle-sub">Only share when CPU &lt; 20%</div></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="toggle-wrap">
+              <div><div class="toggle-label">Allow GPU tasks</div><div class="toggle-sub">Share GPU for AI workloads</div></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="toggle-wrap">
+              <div><div class="toggle-label">Auto-start daemon</div><div class="toggle-sub">Start on system boot</div></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="toggle-wrap">
+              <div><div class="toggle-label">Share on battery</div><div class="toggle-sub">Continue on laptop battery</div></div>
+              <div class="toggle" onclick="this.classList.toggle('on')"></div>
+            </div>
+          </div>
+          <div class="divider">ACTIVE HOURS (UTC)</div>
+          <div class="grid-2" style="gap:12px;">
+            <div class="form-group">
+              <label class="form-label">Start Hour</label>
+              <input class="form-input" type="number" value="0" min="0" max="23">
+            </div>
+            <div class="form-group">
+              <label class="form-label">End Hour</label>
+              <input class="form-input" type="number" value="24" min="1" max="24">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECURITY ───────────────────────────────────────────────────── -->
+    <div class="section" id="section-security">
+      <div class="section-header">
+        <div>
+          <div class="section-title"><span class="ornament">🔒</span> Security</div>
+          <div class="section-subtitle">"The name of the Lord is a fortified tower." — Proverbs 18:10</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Change Password</div>
+          <div style="margin-top:12px;">
+            <div class="form-group">
+              <label class="form-label">Current Password</label>
+              <input class="form-input" type="password" placeholder="Current password">
+            </div>
+            <div class="form-group">
+              <label class="form-label">New Password</label>
+              <input class="form-input" type="password" placeholder="New password" id="newPw">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm New Password</label>
+              <input class="form-input" type="password" placeholder="Confirm password">
+            </div>
+            <button class="btn btn-primary" onclick="showNotification('Password updated successfully.')">Update Password</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Two-Factor Authentication (2FA)</div>
+          <div style="margin-top:16px;text-align:center;">
+            <div class="qr-box">📱</div>
+            <div style="font-size:14px;color:var(--text-dim);margin-bottom:16px;">Scan with Google Authenticator, Authy, or any TOTP app.</div>
+            <div class="form-group">
+              <label class="form-label">Verify Code</label>
+              <input class="form-input" placeholder="000000" maxlength="6" style="text-align:center;letter-spacing:0.3em;">
+            </div>
+            <button class="btn btn-primary" style="width:100%;" onclick="enable2FA()">Enable 2FA</button>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:20px;">
+        <div class="card-title">Security Audit Log</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Timestamp</th><th>Event</th><th>IP Hash</th><th>Result</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="mono">Just now</td>
+                <td>Login</td>
+                <td class="mono">sha3:a1b2c3d4...</td>
+                <td><span class="badge badge-green">Success</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const API = 'http://127.0.0.1:7474/api';
+let state = {
+  nodeId: localStorage.getItem('dm_node_id') || 'DM-DEMO00000000000000',
+  authenticated: false,
+  balance: 0,
+  startTime: Date.now(),
+  earnings: Array(24).fill(0).map((_,i) => Math.random() * 0.05 * i),
+};
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const pw = document.getElementById('loginPassword').value;
+  if (!pw) { showNotification('Please enter your password.'); return; }
+  // In production: POST to /api/auth/login
+  state.authenticated = true;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'flex';
+  initDashboard();
+  showNotification('"I am the gate; whoever enters through me will be saved." — John 10:9');
+}
+
+function showRegister() {
+  showNotification('Run: divinemesh register in your terminal to generate credentials.');
+}
+
+function doLogout() {
+  state.authenticated = false;
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('mainApp').style.display = 'none';
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  document.querySelector(`[data-section="${name}"]`).classList.add('active');
+  const titles = {
+    dashboard:'Dashboard', hardware:'Hardware Profile', earnings:'Earnings',
+    tasks:'Active Tasks', projects:'Community Projects', wallet:'Wallet',
+    upgrade:'Upgrade Tier', settings:'Settings', security:'Security'
+  };
+  document.getElementById('pageTitle').textContent = titles[name] || name;
+}
+
+// ── Data Refresh ──────────────────────────────────────────────────────────────
+async function fetchStats() {
+  try {
+    const r = await fetch(API + '/stats', {signal: AbortSignal.timeout(2000)});
+    return await r.json();
+  } catch { return null; }
+}
+
+async function refreshData() {
+  const stats = await fetchStats();
+  if (stats && stats.current) {
+    const c = stats.current;
+    updateGauges(c.cpu_pct || 0, c.ram_pct || 0, 0);
+    document.getElementById('tasksCompleted').textContent = stats.completed_tasks || 0;
+    if (stats.profile) {
+      document.getElementById('cpuBrand').textContent = stats.profile.cpu_brand || '—';
+      document.getElementById('coreCount').textContent = stats.profile.cpu_cores_physical;
+      document.getElementById('cpuFreq').textContent = (stats.profile.cpu_freq_max_mhz/1000).toFixed(1)+'GHz';
+      document.getElementById('ramTotal').textContent = stats.profile.ram_total_gb.toFixed(1)+' GB';
+      document.getElementById('ramAvail').textContent = stats.profile.ram_available_gb.toFixed(1)+' GB available';
+      document.getElementById('computeScore').textContent = stats.profile.compute_score || '—';
+    }
+  } else {
+    // Demo data
+    updateGauges(Math.random()*40+5, Math.random()*30+20, Math.random()*20);
+  }
+}
+
+function updateGauges(cpu, ram, gpu) {
+  document.getElementById('cpuGauge').style.width = cpu + '%';
+  document.getElementById('cpuPct').textContent = cpu.toFixed(0) + '%';
+  document.getElementById('gpuGauge').style.width = gpu + '%';
+  document.getElementById('gpuPct').textContent = gpu.toFixed(0) + '%';
+  document.getElementById('ramGauge').style.width = ram + '%';
+  document.getElementById('ramPct').textContent = ram.toFixed(0) + '%';
+  document.getElementById('ramUsedGauge').style.width = ram + '%';
+  document.getElementById('ramUsedPct').textContent = ram.toFixed(0) + '%';
+}
+
+function updateUptime() {
+  const secs = Math.floor((Date.now() - state.startTime) / 1000);
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60);
+  document.getElementById('uptimeDisplay').textContent = `${h}h ${m}m`;
+}
+
+// ── Chart ─────────────────────────────────────────────────────────────────────
+function initChart() {
+  const ctx = document.getElementById('earningsChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: Array(24).fill(0).map((_,i) => `${i}:00`),
+      datasets: [{
+        label: 'DMC Earned',
+        data: state.earnings,
+        borderColor: '#c9a84c',
+        backgroundColor: 'rgba(201,168,76,0.08)',
+        borderWidth: 1.5,
+        tension: 0.4,
+        fill: true,
+        pointRadius: 0,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index' } },
+      scales: {
+        x: { ticks: { color: '#7a7a90', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(42,42,58,0.5)' } },
+        y: { ticks: { color: '#7a7a90', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(42,42,58,0.5)' } }
+      }
+    }
+  });
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+function copyAddress() {
+  const addr = document.getElementById('walletAddress').textContent;
+  navigator.clipboard.writeText(addr).then(() => showNotification('Wallet address copied! ◆'));
+}
+
+function selectPayment(el) {
+  document.querySelectorAll('.payment-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function saveLimits() { showNotification('Resource limits saved. "A prudent person foresees danger." — Prov 22:3'); }
+function enable2FA()  { showNotification('2FA enabled. "Be strong and courageous." — Joshua 1:9'); }
+function cashOut()    { showNotification('Cash out initiated. Transfer to your wallet address.'); }
+function donateCompute(id) { showNotification('Compute donation submitted! Your share will be recorded on-chain.'); }
+function viewProject(id)   { showNotification('Loading project details...'); }
+function showPostProject()  { showNotification('Project submission form coming soon.'); }
+
+function showNotification(msg) {
+  const existing = document.querySelector('.notification');
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.className = 'notification';
+  div.textContent = msg;
+  document.body.appendChild(div);
+  setTimeout(() => div.style.opacity = '0', 3500);
+  setTimeout(() => div.remove(), 4000);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function initDashboard() {
+  const nid = state.nodeId;
+  document.getElementById('sidebarNodeId').textContent = nid.substring(0, 20) + '...';
+  document.getElementById('walletAddress').textContent = '0x742d35Cc6634C0532925a3b8D4C9E2A3f5b4A120';
+  initChart();
+  refreshData();
+  setInterval(refreshData, 5000);
+  setInterval(updateUptime, 10000);
+  updateUptime();
+}
+
+// Auto-fill demo node id
+document.getElementById('loginNodeId').value = state.nodeId;
+
+// Show login on load (demo: show app directly)
+// In production: check for stored session
+if (state.nodeId) {
+  // Demo mode — show app immediately
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+</script>
+</body>
+</html>
