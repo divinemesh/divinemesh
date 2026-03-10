@@ -19,7 +19,7 @@ from typing import Optional, List, Dict
 from decimal import Decimal
 
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
+from web3.middleware import ExtraDataToPOAMiddleware
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
@@ -189,7 +189,7 @@ class BlockchainClient:
         rpc = cfg["rpc"].replace("{INFURA_KEY}", infura_key or "")
         self.w3 = Web3(Web3.HTTPProvider(rpc))
         if network in ("polygon", "bsc"):
-            self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+            self.w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
 
         self.chain_id = cfg["chain_id"]
         self.explorer = cfg["explorer"]
