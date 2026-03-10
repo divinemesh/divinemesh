@@ -2,7 +2,7 @@
 # "The Lord is my strength and my shield; my heart trusts in him." - Psalm 28:7
 #
 # One-line install (Run as Administrator in PowerShell):
-#   irm https://install.divinemesh.io/windows | iex
+#   irm https://divinemesh.com/install.sh/windows | iex
 
 #Requires -Version 5.1
 Set-StrictMode -Version Latest

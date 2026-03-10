@@ -49,7 +49,7 @@ services:
 
     environment:
       - DIVINEMESH_NETWORK=${DIVINEMESH_NETWORK:-polygon}
-      - DIVINEMESH_COORDINATOR=${DIVINEMESH_COORDINATOR:-https://coordinator.divinemesh.io}
+      - DIVINEMESH_COORDINATOR=${DIVINEMESH_COORDINATOR:-https://coordinator.divinemesh.com}
       - DIVINEMESH_PORT=7474
 
     # ── GPU Support (optional) ────────────────────────────────────────────

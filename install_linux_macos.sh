@@ -4,7 +4,7 @@
 # │  "The Lord is my strength and my shield." - Psalm 28:7                      │
 # │                                                                             │
 # │  One-line install:                                                          │
-# │    curl -sSL https://install.divinemesh.io | bash                           │
+# │    curl -sSL https://divinemesh.com/install.sh | bash                           │
 # └─────────────────────────────────────────────────────────────────────────────┘
 
 set -euo pipefail
@@ -136,7 +136,7 @@ create_systemd_service() {
     cat > /tmp/divinemesh.service << SERVICE
 [Unit]
 Description=DivineMesh Compute Node
-Documentation=https://docs.divinemesh.io
+Documentation=https://docs.divinemesh.com
 After=network-online.target docker.service
 Wants=network-online.target
 

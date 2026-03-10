@@ -5,7 +5,7 @@
 # Requirements: Termux (https://termux.dev) installed on Android
 #
 # One-line install (paste into Termux):
-#   curl -sSL https://install.divinemesh.io/android | bash
+#   curl -sSL https://divinemesh.com/install.sh/android | bash
 
 set -euo pipefail
 

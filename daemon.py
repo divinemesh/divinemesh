@@ -34,7 +34,7 @@ from .encryption import SacredEncryptor, generate_sacred_id
 log = logging.getLogger("divinemesh.daemon")
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-COORDINATOR_URL = os.getenv("DIVINEMESH_COORDINATOR", "https://coordinator.divinemesh.io")
+COORDINATOR_URL = os.getenv("DIVINEMESH_COORDINATOR", "https://coordinator.divinemesh.com")
 LOCAL_API_PORT = int(os.getenv("DIVINEMESH_PORT", "7474"))
 HEARTBEAT_INTERVAL = 30   # seconds
 TASK_POLL_INTERVAL = 5    # seconds
